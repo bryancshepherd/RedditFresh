@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+
+<style>
+
+	body {
+	  font: 10px sans-serif;
+	}
+
+	.axis path,
+	.axis line {
+	  fill: none;
+	  stroke: #000;
+	  shape-rendering: crispEdges;
+	}
+
+	.x.axis path {
+	  display: none;
+	}
+
+	.line {
+	  fill: none;
+	  stroke: steelblue;
+	  stroke-width: 1.5px;
+	}
+	
+	select {
+		float: left;
+	}
+	
+	h1.title {
+		text-align: center;
+		width: 1200px;
+	}
+	
+
+</style>
+
+</head>
+<body>
+<h1 class='title'>Reddit Traffic Monitor</h1>
+<h2>Select a metric below to see Reddit activity over the last two days.</h2>
+<h3>(<i>T</i> = 300s. All times EST)</h3>
+
+    <script type="text/javascript">
+
+		var margin = {top: 20, right: 20, bottom: 30, left: 50},
+			width = 960 - margin.left - margin.right,
+			height = 500 - margin.top - margin.bottom;
+
+		var parseDate = d3.time.format("%Y%m%d%H%M%S").parse;
+
+		var x = d3.time.scale()
+			.range([0, width]);
+
+		var y = d3.scale.linear()
+			.range([height, 0]);
+
+		var xAxis = d3.svg.axis()
+			.scale(x)
+			.orient("bottom");
+
+		var yAxis = d3.svg.axis()
+			.scale(y)
+			.orient("left");
+
+		var line = d3.svg.line()
+			.x(function(d) { return x(d["dt"]); })
+			.y(function(d) { return y(+d["rmsd"]); });
+			
+		var line2 = d3.svg.line()
+			.x(function(d) { return x(d["dt"]); })
+			.y(function(d) { return y(+d["pn"]); });
+			
+		labels = ["None", "Rank movement", "Freshness"];
+		options = [0, 1, 2];
+		
+		d3.select("body")
+			.append("select")
+			.selectAll("option")
+			.data(options)
+			.enter()
+			.append("option")
+			// Provide available text for the dropdown options
+			.text(function(d) {return labels[d];})
+
+		d3.select('select')
+			.on("change", function() {
+
+			key = this.selectedIndex; 
+			
+if (key==0) {
+
+		var s = d3.selectAll('svg');
+
+		s = s.remove();
+		
+} else if (key==1) {
+
+		var s = d3.selectAll('svg');
+
+		s = s.remove();
+
+		var svg = d3.select("body").append("svg")
+			.attr("width", width + margin.left + margin.right)
+			.attr("height", height + margin.top + margin.bottom)
+		    .append("g")
+			.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+		
+		d3.csv("./data/corr_hist.csv", function(data) {
+		
+			dataset = data.map(function(d) { 
+				return {
+					corr: +d["correlation"], 
+					dt: parseDate(d["datetime"]), 
+					sig: +d["significance"],
+					rmsd : +d["rmsd"]
+				}; 
+			});
+		
+
+		  x.domain(d3.extent(dataset, function(d) { return d.dt; }));
+		  y.domain([0,20]);
+
+		  svg.append("g")
+			  .attr("class", "x axis")
+			  .attr("transform", "translate(0," + height + ")")
+			  .call(xAxis);
+
+		  svg.append("g")
+			  .attr("class", "y axis")
+			  .call(yAxis)
+			.append("text")
+			  .attr("transform", "rotate(-90)")
+			  .attr("y", 6)
+			  .attr("dy", ".71em")
+			  .style("text-anchor", "end")
+			  .text("RMSD");
+
+		  svg.append("path")
+			  .datum(dataset)
+			  .attr("class", "line")
+			  .attr("d", line);
+			  
+		  svg.append("text")
+			.attr("x", (width / 2))             
+			.attr("y", 0)
+			.attr("text-anchor", "middle")  
+			.style("font-size", "16px") 
+			.style("font-weight", "bold")  
+			.text("Change in the Top 50 Article Ranks (Root Mean Squared Difference)");
+
+		});
+		
+} else if (key==2) {
+
+		var s = d3.selectAll('svg');
+
+		s = s.remove();
+
+		var svg2 = d3.select("body").append("svg")
+			.attr("width", width + margin.left + margin.right)
+			.attr("height", height + margin.top + margin.bottom)
+		    .append("g")
+			.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+		
+		d3.csv("./data/corr_hist.csv", function(data) {
+		
+			dataset2 = data.map(function(d) { 
+				return {
+					corr: +d["correlation"], 
+					dt: parseDate(d["datetime"]), 
+					pn: +d["percentnew"],
+					rmsd : +d["rmsd"]
+				}; 
+			});
+		
+
+		  x.domain(d3.extent(dataset2, function(d) { return d.dt; }));
+		  y.domain([0,100]);
+
+		  svg2.append("g")
+			  .attr("class", "x axis")
+			  .attr("transform", "translate(0," + height + ")")
+			  .call(xAxis);
+
+		  svg2.append("g")
+			  .attr("class", "y axis")
+			  .call(yAxis)
+			.append("text")
+			  .attr("transform", "rotate(-90)")
+			  .attr("y", 6)
+			  .attr("dy", ".71em")
+			  .style("text-anchor", "end")
+			  .text("% new");
+
+		  svg2.append("path")
+			  .datum(dataset2)
+			  .attr("class", "line")
+			  .attr("d", line2);
+			  
+		  svg2.append("text")
+			.attr("x", (width / 2))             
+			.attr("y", 0)
+			.attr("text-anchor", "middle")  
+			.style("font-size", "16px") 
+			.style("font-weight", "bold")  
+			.text("Freshness of articles in r/new");
+			
+
+		});
+
+} 
+});
+
+
+	</script>
+
+</body>
+</html>
