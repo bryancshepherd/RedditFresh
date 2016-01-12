@@ -4,10 +4,10 @@ import praw
 import os
 import pandas as pd
 from pandas import Series, DataFrame
-from scipy.stats.stats import spearmanr
+from scipy.stats.stats import pearsonr
 from numpy import mean
 
-r = praw.Reddit('Stats tracker by u/yourname') # Change 'yourname' to your Reddit username
+r = praw.Reddit('Stats tracker by u/mechanicalreddit') # Change 'yourname' to your Reddit username
 
 # Set the directories to save the data to
 historical_data_directory="/home/pi/projects/RedditFresh/HistoricalData"
@@ -28,6 +28,9 @@ times_in_day = float(86400)/(60*update_time)
 
 # Number of historical correlations to keep
 num_hist_data_points = 600
+
+# Size of the correlation moving average window
+ma_window = 3
 
 while True:
     
@@ -89,38 +92,47 @@ while True:
             # keep last two columns for correlations
             daily_data_small = daily_data.iloc[:, ncols-2:ncols] 
             
-            # Fill missings with 51
+            # As a quick patch, fill missings with 51
             daily_data_small = daily_data_small.fillna(51)
-            
+
             dds_col_names = daily_data_small.columns
             
             # Keep only cases where at least one value is <= 50
             temp_corr_data = daily_data_small[(daily_data_small[dds_col_names[0]]<=50) | (daily_data_small[dds_col_names[1]]<=50)]
             
             # Calculate a correlation between the new rom and the previously added row
-            corr_val=spearmanr(temp_corr_data[dds_col_names[0]], temp_corr_data[dds_col_names[1]])
+            corr_val=pearsonr(temp_corr_data[dds_col_names[0]], temp_corr_data[dds_col_names[1]])
             
             # Calculate a root mean squared difference, i.e., a psuedo RMSE
             RMSD = (mean(((temp_corr_data[dds_col_names[0]] - temp_corr_data[dds_col_names[1]])**2)))**.5
-        
+
+            
             if 'corr_hist' in locals():
+                ma_corrs.append(corr_val[0])
+                del ma_corrs[0]
+                corrMA = sum(ma_corrs)/len(ma_corrs)
+                
                 # if corr_hist already exists, use this
                 temp_corr_hist = DataFrame({'datetime' : Series(current_datetime),
                                'correlation' : Series(corr_val[0]),
                                 'significance' : Series(corr_val[1]), 
                                 'percentnew' : Series(percent_new), 
-                                'rmsd' : Series(RMSD)},index=[0]) 
+                                'rmsd' : Series(RMSD),
+                                'corrMA' : Series(corrMA)}, index=[0]) 
                 corr_hist = corr_hist.append(temp_corr_hist)
                 
                 corr_hist = corr_hist.tail(num_hist_data_points)
                 
             else:    
                 # if corr hist doesn't already exist use this
+                ma_corrs = [0] * ma_window
+                corrMA = 0
                 corr_hist = DataFrame({'datetime' : Series(current_datetime),
                                        'correlation' : Series(corr_val[0]),
                                         'significance' : Series(corr_val[1]), 
                                         'percentnew' : Series(percent_new), 
-                                        'rmsd' : Series(RMSD)},index=[0])  
+                                        'rmsd' : Series(RMSD),
+                                       'corrMA' : Series(corrMA)},index=[0])  
         
         if not os.path.exists(historical_data_directory):
             os.makedirs(historical_data_directory)

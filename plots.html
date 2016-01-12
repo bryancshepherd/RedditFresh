@@ -68,7 +68,7 @@
 
 		var line = d3.svg.line()
 			.x(function(d) { return x(d["dt"]); })
-			.y(function(d) { return y(+d["rmsd"]); });
+			.y(function(d) { return y(+d["corrMA"]); });
 			
 		var line2 = d3.svg.line()
 			.x(function(d) { return x(d["dt"]); })
@@ -116,13 +116,14 @@ if (key==0) {
 					corr: +d["correlation"], 
 					dt: parseDate(d["datetime"]), 
 					sig: +d["significance"],
-					rmsd : +d["rmsd"]
+					rmsd : +d["rmsd"],
+					corrMA : +d["corrMA"]
 				}; 
 			});
 		
 
 		  x.domain(d3.extent(dataset, function(d) { return d.dt; }));
-		  y.domain([0,20]);
+		  y.domain([.8,1]);
 
 		  svg.append("g")
 			  .attr("class", "x axis")
@@ -137,7 +138,7 @@ if (key==0) {
 			  .attr("y", 6)
 			  .attr("dy", ".71em")
 			  .style("text-anchor", "end")
-			  .text("RMSD");
+			  .text("Corr.");
 
 		  svg.append("path")
 			  .datum(dataset)
@@ -150,7 +151,7 @@ if (key==0) {
 			.attr("text-anchor", "middle")  
 			.style("font-size", "16px") 
 			.style("font-weight", "bold")  
-			.text("Change in the Top 50 Article Ranks (Root Mean Squared Difference)");
+			.text("Change in the Top 50 Article Ranks (Moving Average of Pearson Corr.)");
 
 		});
 		
